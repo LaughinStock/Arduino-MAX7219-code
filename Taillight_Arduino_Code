@@ -1,0 +1,106 @@
+#include <LedControl.h>
+
+LedControl lc = LedControl(5, 7, 6, 1); // Pins for MAX7219 chip (DIN, CLK, CS, 0 or 1)
+const int buttonL = 3; // Displays the 8x8 LEDs going to the Left
+const int buttonR = 2; // Displays the 8x8 LEDs going to the Right
+bool ledState = false;
+bool ledStateR = false;
+int buttonStateL = 0;
+int buttonStateR = 0;
+int lastButtonStateL = 0;
+int lastButtonStateR = 0;
+int trigPin = 3;
+int echoPin = 2;
+long duration = 0;
+long cm = 0;
+
+void setup() {
+  pinMode(buttonL, INPUT);
+  pinMode(buttonR, INPUT);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  lc.shutdown(0, false);
+  lc.setIntensity(0, 8);
+  lc.clearDisplay(0);
+  Serial.begin(9600);
+}
+
+void loop() {
+  buttonStateL = digitalRead(buttonL);
+  buttonStateR = digitalRead(buttonR);
+
+  if (buttonStateL == HIGH && lastButtonStateL == LOW) {
+    ledState = !ledState; // Toggle the state for buttonL
+  }
+
+  if (buttonStateR == HIGH && lastButtonStateR == LOW) {
+    ledStateR = !ledStateR; // Toggle the state for buttonR
+  }
+
+  if (ledState) { 
+    // Displays an arrow going to left
+    lc.setRow(0, 0, B00011000);
+    lc.setRow(0, 1, B00111100);
+    lc.setRow(0, 2, B01111110);
+    lc.setRow(0, 3, B11011011);
+    lc.setRow(0, 4, B10011001);
+    lc.setRow(0, 5, B00011000);
+    lc.setRow(0, 6, B00011000);
+    lc.setRow(0, 7, B00011000);
+  } else if (ledStateR) {
+    // Displays an arrow going to the right
+    lc.setRow(0, 0, B00011000);
+    lc.setRow(0, 1, B00011000);
+    lc.setRow(0, 2, B00011000);
+    lc.setRow(0, 3, B10011001);
+    lc.setRow(0, 4, B11011011);
+    lc.setRow(0, 5, B01111110);
+    lc.setRow(0, 6, B00111100);
+    lc.setRow(0, 7, B00011000);
+  } else { 
+    // This is the part where the code of the Ultrasonic Distance Sensor is inserted
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(5);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(trigPin, LOW);
+
+    duration = pulseIn(echoPin, HIGH);
+    cm = (duration / 2) * (0.0343);
+
+    if (cm < 10) {
+      // If the distance is within 25cm, the tailight would fully display.
+     lc.setRow(0, 0, B11111111);
+     lc.setRow(0, 1, B11111111);
+     lc.setRow(0, 2, B11111111);
+     lc.setRow(0, 3, B11111111);
+     lc.setRow(0, 4, B11111111);
+     lc.setRow(0, 5, B11111111);
+     lc.setRow(0, 6, B11111111);
+     lc.setRow(0, 7, B11111111); 
+    } else if (cm < 20) {
+      // If the distance of an object is within 50cm, the tailight should partly display.
+     lc.setRow(0, 0, B11111111);
+     lc.setRow(0, 1, B10000001);
+     lc.setRow(0, 2, B10111101);
+     lc.setRow(0, 3, B10111101);
+     lc.setRow(0, 4, B10111101);
+     lc.setRow(0, 5, B10111101);
+     lc.setRow(0, 6, B10000001);
+     lc.setRow(0, 7, B11111111); 
+    } else {
+      // If the distance of an object exceeds 50cm or beyond, the tailight should normally display.
+      lc.setRow(0, 0, B11111111);
+      lc.setRow(0, 1, B10000001);
+      lc.setRow(0, 2, B10111101);
+      lc.setRow(0, 3, B10100101);
+      lc.setRow(0, 4, B10100101);
+      lc.setRow(0, 5, B10111101);
+      lc.setRow(0, 6, B10000001);
+      lc.setRow(0, 7, B11111111);
+    }
+  }
+
+  lastButtonStateL = buttonStateL;
+  lastButtonStateR = buttonStateR;
+}
